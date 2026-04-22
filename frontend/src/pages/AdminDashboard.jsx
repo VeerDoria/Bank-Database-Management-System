@@ -285,6 +285,43 @@ export default function AdminDashboard() {
     }
   };
 
+  // --- NEW: State for Search Directory ---
+  const [searchType, setSearchType] = useState("email");
+  const [searchQueryInput, setSearchQueryInput] = useState("");
+  const [searchResult, setSearchResult] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // --- NEW: Handle Directory Search ---
+  // --- Handle Directory Search ---
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQueryInput.trim()) return;
+
+    setIsSearching(true);
+    setSearchResult(null);
+
+    try {
+      let res;
+      if (searchType === "email") {
+        res = await api.get(`/admin/user-details/${searchQueryInput}`);
+        setSearchResult({ type: "user", data: res.data });
+      } else if (searchType === "account") {
+        res = await api.get(
+          `/admin/account-details/${searchQueryInput}`,
+        );
+        setSearchResult({ type: "account", data: res.data });
+      } else if (searchType === "loan") {
+        // NEW: Calls the new loan route!
+        res = await api.get(`/admin/loan-details/${searchQueryInput}`);
+        setSearchResult({ type: "loan", data: res.data });
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Search failed. Record not found.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   // Function to render the correct view based on the active tab
   const renderContent = () => {
     switch (activeTab) {
@@ -816,6 +853,472 @@ export default function AdminDashboard() {
             )}
           </div>
         );
+      case "search-directory":
+        return (
+          <div className="animate-fade-in w-full">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              Search Directory
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Lookup comprehensive data for specific users or accounts.
+            </p>
+
+            {/* Search Form */}
+            {/* Search Form */}
+            <form
+              onSubmit={handleSearch}
+              className="bg-white shadow-xl rounded-2xl p-6 md:p-8 w-full max-w-2xl space-y-4 border border-gray-100 mb-8"
+            >
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="w-full sm:w-1/3">
+                  <label className="block text-sm font-bold text-gray-700 mb-1">
+                    Search By
+                  </label>
+                  <select
+                    value={searchType}
+                    onChange={(e) => {
+                      setSearchType(e.target.value);
+                      setSearchResult(null);
+                    }}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition bg-white"
+                  >
+                    <option value="email">User Email</option>
+                    <option value="account">Account Number</option>
+                    <option value="loan">Loan Number</option> {/* NEW OPTION */}
+                  </select>
+                </div>
+                <div className="w-full sm:w-2/3">
+                  <label className="block text-sm font-bold text-gray-700 mb-1">
+                    {searchType === "email"
+                      ? "Enter Email Address *"
+                      : searchType === "account"
+                        ? "Enter 12-Digit Account Number *"
+                        : "Enter Loan Number (e.g., LN-12345678) *"}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type={searchType === "email" ? "email" : "text"}
+                      value={searchQueryInput}
+                      onChange={(e) => setSearchQueryInput(e.target.value)}
+                      placeholder={
+                        searchType === "email"
+                          ? "user@example.com"
+                          : searchType === "account"
+                            ? "e.g., 847291038472"
+                            : "e.g., LN-84729103"
+                      }
+                      required
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSearching}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold transition shadow-md disabled:opacity-50"
+                    >
+                      {isSearching ? "..." : "Search"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+
+            {/* Results Rendering */}
+            {searchResult && searchResult.type === "user" && (
+              <div className="space-y-6 animate-fade-in max-w-5xl">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* User Info Card */}
+                  <div className="bg-white shadow-xl rounded-2xl p-6 border border-gray-100 md:col-span-2">
+                    <h3 className="text-lg font-bold text-blue-700 border-b border-gray-100 pb-2 mb-4">
+                      User Profile
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-500 font-bold uppercase text-xs">
+                          Name
+                        </p>
+                        <p className="font-semibold text-gray-800">
+                          {searchResult.data.user.fullName}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 font-bold uppercase text-xs">
+                          Email
+                        </p>
+                        <p className="font-semibold text-gray-800">
+                          {searchResult.data.user.email}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 font-bold uppercase text-xs">
+                          Phone
+                        </p>
+                        <p className="font-semibold text-gray-800">
+                          {searchResult.data.user.mobileNumber}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 font-bold uppercase text-xs">
+                          DOB & Gender
+                        </p>
+                        <p className="font-semibold text-gray-800">
+                          {searchResult.data.user.dob} (
+                          {searchResult.data.user.gender})
+                        </p>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <p className="text-gray-500 font-bold uppercase text-xs">
+                          Address
+                        </p>
+                        <p className="font-semibold text-gray-800">
+                          {searchResult.data.user.address}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Financial Summary Card */}
+                  <div className="bg-gradient-to-br from-blue-600 to-blue-800 shadow-xl rounded-2xl p-6 text-white border border-blue-500 flex flex-col justify-center">
+                    <h3 className="text-sm uppercase tracking-wider font-bold opacity-80 mb-2">
+                      Cumulative Wealth
+                    </h3>
+                    <p className="text-4xl font-black mb-4">
+                      ₹
+                      {
+                        searchResult.data.financialSummary
+                          .totalCumulativeBalance
+                      }
+                    </p>
+                    <div className="flex justify-between text-sm opacity-90 border-t border-blue-400 pt-4">
+                      <span>
+                        {searchResult.data.financialSummary.totalAccounts}{" "}
+                        Accounts
+                      </span>
+                      <span>
+                        {searchResult.data.financialSummary.totalLoans} Loans
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Accounts Table */}
+                <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
+                  <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                    <h3 className="font-bold text-gray-800">Owned Accounts</h3>
+                  </div>
+                  {searchResult.data.accounts.length === 0 ? (
+                    <p className="p-6 text-gray-500">
+                      No accounts found for this user.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-blue-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Number
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Type
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Balance
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                          {searchResult.data.accounts.map((acc) => (
+                            <tr key={acc.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-gray-800">
+                                {acc.accountNumber || "Pending"}
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                {acc.accountType}
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-sm">
+                                <span
+                                  className={`px-2 py-1 text-xs font-bold rounded-md ${acc.status === "RUNNING" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                                >
+                                  {acc.status}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-gray-800">
+                                ₹{parseFloat(acc.balance).toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Loans Table */}
+                {searchResult.data.loans.length > 0 && (
+                  <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
+                    <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                      <h3 className="font-bold text-gray-800">
+                        Active & Past Loans
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-blue-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Loan No.
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Type
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Principal
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                          {searchResult.data.loans.map((loan) => (
+                            <tr key={loan.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-gray-800">
+                                {loan.loanNumber}
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                {loan.loanType}
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-gray-800">
+                                ₹{parseFloat(loan.baseAmount).toFixed(2)}
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-gray-600">
+                                {loan.status}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {searchResult && searchResult.type === "account" && (
+              <div className="space-y-6 animate-fade-in max-w-5xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Account Info Card */}
+                  <div className="bg-white shadow-xl rounded-2xl p-6 border border-gray-100">
+                    <h3 className="text-lg font-bold text-blue-700 border-b border-gray-100 pb-2 mb-4 flex justify-between items-center">
+                      <span>Account Details</span>
+                      <span
+                        className={`px-2.5 py-1 text-xs font-bold rounded-md ${searchResult.data.accountDetails.status === "RUNNING" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                      >
+                        {searchResult.data.accountDetails.status}
+                      </span>
+                    </h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 font-bold uppercase">
+                          Account Number
+                        </span>
+                        <span className="font-black text-gray-900">
+                          {searchResult.data.accountDetails.accountNumber}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 font-bold uppercase">
+                          Type
+                        </span>
+                        <span className="font-semibold text-gray-800">
+                          {searchResult.data.accountDetails.accountType}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 font-bold uppercase">
+                          Balance
+                        </span>
+                        <span className="font-black text-blue-600 text-lg">
+                          ₹{searchResult.data.accountDetails.balance}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 font-bold uppercase">
+                          Interest Rate
+                        </span>
+                        <span className="font-semibold text-gray-800">
+                          {searchResult.data.accountDetails.interestRate}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 font-bold uppercase">
+                          Opened On
+                        </span>
+                        <span className="font-semibold text-gray-800">
+                          {new Date(
+                            searchResult.data.accountDetails.openingDate ||
+                              searchResult.data.accountDetails.createdAt,
+                          ).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Owner Info Card */}
+                  <div className="bg-white shadow-xl rounded-2xl p-6 border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800 border-b border-gray-100 pb-2 mb-4">
+                      Owner Details
+                    </h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex flex-col">
+                        <span className="text-gray-500 font-bold uppercase text-xs">
+                          Name
+                        </span>
+                        <span className="font-semibold text-gray-900 text-base">
+                          {searchResult.data.owner.fullName}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-500 font-bold uppercase text-xs">
+                          Email
+                        </span>
+                        <span className="font-semibold text-gray-800">
+                          {searchResult.data.owner.email}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-500 font-bold uppercase text-xs">
+                          Phone
+                        </span>
+                        <span className="font-semibold text-gray-800">
+                          {searchResult.data.owner.mobileNumber}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Linked Loans Table */}
+                {searchResult.data.linkedLoans.length > 0 && (
+                  <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-gray-100">
+                    <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                      <h3 className="font-bold text-gray-800">Linked Loans</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-blue-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Loan No.
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Type & Principal
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Next EMI
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                          {searchResult.data.linkedLoans.map((loan) => (
+                            <tr key={loan.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-gray-800">
+                                {loan.loanNumber}
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                {loan.loanType} <br />
+                                <span className="text-green-600 font-bold">
+                                  ₹{parseFloat(loan.baseAmount).toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-gray-800">
+                                ₹{parseFloat(loan.nextEmiAmount).toFixed(2)}
+                                <br />
+                                <span className="text-xs text-gray-500 font-normal">
+                                  Due: {loan.nextEmiDate || "-"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-sm font-bold text-gray-600">
+                                {loan.status}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* NEW: Loan Search Result UI */}
+            {searchResult && searchResult.type === "loan" && (
+              <div className="space-y-6 animate-fade-in max-w-5xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                  {/* Loan Details Card */}
+                  <div className="bg-white shadow-xl rounded-2xl p-6 border border-gray-100">
+                    <h3 className="text-lg font-bold text-blue-700 border-b border-gray-100 pb-2 mb-4 flex justify-between items-center">
+                      <span>Loan Overview</span>
+                      <span className={`px-2.5 py-1 text-xs font-bold rounded-md ${
+                        searchResult.data.loanDetails.status === "ACTIVE" ? "bg-green-100 text-green-800" : 
+                        searchResult.data.loanDetails.status === "PENDING" ? "bg-yellow-100 text-yellow-800" : 
+                        searchResult.data.loanDetails.status === "REJECTED" ? "bg-red-100 text-red-800" : 
+                        "bg-gray-100 text-gray-800"
+                      }`}>
+                        {searchResult.data.loanDetails.status}
+                      </span>
+                    </h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between"><span className="text-gray-500 font-bold uppercase">Loan Number</span><span className="font-black text-gray-900">{searchResult.data.loanDetails.loanNumber}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500 font-bold uppercase">Type</span><span className="font-semibold text-gray-800">{searchResult.data.loanDetails.loanType}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500 font-bold uppercase">Principal</span><span className="font-black text-green-600 text-lg">₹{parseFloat(searchResult.data.loanDetails.baseAmount).toFixed(2)}</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500 font-bold uppercase">Interest Rate</span><span className="font-semibold text-gray-800">{searchResult.data.loanDetails.interestRate}%</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500 font-bold uppercase">Next EMI</span><span className="font-semibold text-gray-800">₹{parseFloat(searchResult.data.loanDetails.nextEmiAmount).toFixed(2)} (Due: {searchResult.data.loanDetails.nextEmiDate || "N/A"})</span></div>
+                      <div className="flex justify-between"><span className="text-gray-500 font-bold uppercase">EMIs Left</span><span className="font-semibold text-gray-800">{searchResult.data.loanDetails.emisLeft}</span></div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Borrower Info Card */}
+                    <div className="bg-white shadow-xl rounded-2xl p-6 border border-gray-100">
+                      <h3 className="text-lg font-bold text-gray-800 border-b border-gray-100 pb-2 mb-4">Borrower Details</h3>
+                      {searchResult.data.owner ? (
+                        <div className="space-y-3 text-sm">
+                          <div className="flex flex-col"><span className="text-gray-500 font-bold uppercase text-xs">Name</span><span className="font-semibold text-gray-900 text-base">{searchResult.data.owner.fullName}</span></div>
+                          <div className="flex flex-col"><span className="text-gray-500 font-bold uppercase text-xs">Email</span><span className="font-semibold text-gray-800">{searchResult.data.owner.email}</span></div>
+                          <div className="flex flex-col"><span className="text-gray-500 font-bold uppercase text-xs">Phone</span><span className="font-semibold text-gray-800">{searchResult.data.owner.mobileNumber}</span></div>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 italic">Borrower data not found.</p>
+                      )}
+                    </div>
+
+                    {/* Linked Account Info Card */}
+                    <div className="bg-white shadow-xl rounded-2xl p-6 border border-gray-100">
+                      <h3 className="text-lg font-bold text-gray-800 border-b border-gray-100 pb-2 mb-4">Linked Bank Account</h3>
+                      {searchResult.data.linkedAccount ? (
+                        <div className="space-y-3 text-sm">
+                          <div className="flex justify-between"><span className="text-gray-500 font-bold uppercase">Account Number</span><span className="font-semibold text-gray-900">{searchResult.data.linkedAccount.accountNumber}</span></div>
+                          <div className="flex justify-between"><span className="text-gray-500 font-bold uppercase">Type</span><span className="font-semibold text-gray-800">{searchResult.data.linkedAccount.accountType}</span></div>
+                          <div className="flex justify-between"><span className="text-gray-500 font-bold uppercase">Status</span><span className={`font-bold ${searchResult.data.linkedAccount.status === "RUNNING" ? "text-green-600" : "text-red-600"}`}>{searchResult.data.linkedAccount.status}</span></div>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 italic">Linked account not found.</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+            )}
+          </div>
+        );
       case "db-stats":
         return (
           <div className="animate-fade-in w-full">
@@ -1162,6 +1665,7 @@ export default function AdminDashboard() {
             { id: "loan-requests", label: "Loan Requests" },
             { id: "sql-console", label: "SQL Console" },
             { id: "profile", label: "Admin Profile" },
+            { id: "search-directory", label: "Search Directory" },
             { id: "db-stats", label: "System Overview" },
           ].map((tab) => (
             <li key={tab.id} className="min-w-fit md:min-w-0">
